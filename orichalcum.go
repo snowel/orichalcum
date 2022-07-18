@@ -7,8 +7,10 @@ import (
 )
 
 func main() {
-
-		  printFilenames(".")
+		  if IsOriDir("."){ 
+					 fmt.Println("Ori dir!")
+		  }
+		  //printFilenames(".")
 		  //fmt.Println("Orichalcum.") the original, total functionality of this program's first install 
 }
 
@@ -16,6 +18,26 @@ func main() {
 // CUE read
 
 // CUE write
+
+// Check dir
+
+func IsOriDir(path string) bool {
+		  pathFiles, _ := os.ReadDir(path)
+
+		  length := len(pathFiles)
+
+		  for i := 0; i < length; i++ {
+					 if pathFiles[i].Name() == ".orichalcum" && pathFiles[i].IsDir() {
+								return true
+					 }
+					 if pathFiles[i].Name() == "home" && pathFiles[i].IsDir() { // not sure how to best stop searhcing up, will probably be a config
+								return false
+					 }
+		  }
+
+		  newPath := strings.Join([]string{path, ".."}, "/")
+		  return IsOriDir(newPath)
+}
 
 // recursive walk
 
