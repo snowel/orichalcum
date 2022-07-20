@@ -11,9 +11,13 @@ import (
 
 func main() {
 
-		  orid := WhereIsOriDir(".")
 
-		  fmt.Println(orid)
+		  testFile1 := OriFile{Path: "./nice", IsArc: false}
+		  testFile2 := OriFile{Path: "./words/loce", IsArc: true}
+
+		  test := OriLog{FileEntries: []OriFile{testFile1, testFile2}}
+
+		  writeFileLog(&test, ".")
 
 		  //if IsOriDir("."){ 
 		//			 fmt.Println("Ori dir!")
@@ -27,9 +31,9 @@ func main() {
 
 // CUE/JSON write
 
-func writeFileLog(files *[]OriFile, path string) {
+func writeFileLog(files *OriLog, path string) {
 
-		  oriRoot := WhereIsOriDir(path string)
+		  oriRoot := WhereIsOriDir(path)
 
 		  jfile, ok := json.Marshal(*files)
 		  if ok != nil {
@@ -127,22 +131,30 @@ func printFilenames(rootdir string) {
 }
 
 // files structs
+type OriLog struct {
+		  FileEntries []OriFile
+		  Meta OriMeta
+}
+
+type OriMeta struct {
+		  DateCreated uint
+}
 
 type OriFile struct {
-		  path string // path relative to the root of the ori directory
-		  datemod [3]byte // {y, m, d}
-		  timemod string // time modified
+		  Path string // path relative to the root of the ori directory
+		  Datemod [3]byte // {y, m, d}
+		  Timemod string // time modified
 
-		  dateCreated [3]byte // same as date init dir if the file is older than the creation of the ori dir
-		  timeCreated [3]byte // hour/ minute / seconds
+		  DateCreated [3]byte // same as date init dir if the file is older than the creation of the ori dir
+		  TimeCreated [3]byte // hour/ minute / seconds
 
-		  isArc bool // file has auto archive option enables
-		  archive *OriArc
+		  IsArc bool // file has auto archive option enables
+		  Archive *OriArc
 } 
 
 type OriArc struct {
-		  isRED bool // the archived copies are saved as Redundate Error-protected Digital copies
-		  isTotal bool // every time the file is changed a copy is saved to a vault
+		  IsRED bool // the archived copies are saved as Redundate Error-protected Digital copies
+		  IsTotal bool // every time the file is changed a copy is saved to a vault
 }
 
 // per file hash + object create/update
