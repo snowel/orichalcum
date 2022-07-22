@@ -4,6 +4,7 @@ import (
 		  "fmt"
 		  "os"
 		  "strings"
+		  "time"
 
 
 		  "encoding/json"
@@ -104,7 +105,6 @@ func InitOriDir() {
 		  if ok != nil {
 					 fmt.Println("Somethign went wrong...")
 		  }
-
 }
 
 // recursive walk
@@ -137,27 +137,63 @@ type OriLog struct {
 }
 
 type OriMeta struct {
-		  DateCreated uint
+		  DateInit int64
 }
 
 type OriFile struct {
 		  Path string // path relative to the root of the ori directory
-		  Datemod [3]byte // {y, m, d}
-		  Timemod string // time modified
+		  Datemod int64
 
-		  DateCreated [3]byte // same as date init dir if the file is older than the creation of the ori dir
-		  TimeCreated [3]byte // hour/ minute / seconds
+		  DateCreated int64
 
 		  IsArc bool // file has auto archive option enables
 		  Archive *OriArc
 } 
 
 type OriArc struct {
+		  Mode ArcMode
 		  IsRED bool // the archived copies are saved as Redundate Error-protected Digital copies
-		  IsTotal bool // every time the file is changed a copy is saved to a vault
+		  SizeChangeThresh uint // every time the file is changed a copy is saved to a vault
+		  VaultDirs []string
 }
 
+type ArcMode int
+
+const (
+		  None ArcMode = iota
+		  Total 
+		  Daily
+		  Weekly
+		  Montly
+		  SizeChange// for a size change threshold
+)
+
 // per file hash + object create/update
+
+
+func CreateFileEntry(fSlice []OriFile, dir string) {//TODO error
+		  newEntry := OriFile{
+										  Path: dir,
+										  DateCreated: time.Now().Unix(),
+										  IsArc: false
+		  }
+
+		  fSlice = fSlice.append(newEntry)
+}
+
+func UpdateFileEntry(entry *OriFile) {
+		  *entry.Datemod = time.Now().Unix()
+		  
+		  if *entry.IsBool == true {
+					 ArchFile(*entry.Path)
+		  }
+}
+
+func SetArch(entry *OriFile, red bool, mode ArcMode) {
+		  //mode enum?
+
+		  entry.Archive.Mode = mode
+}
 
 // per dir create/update ???
 
