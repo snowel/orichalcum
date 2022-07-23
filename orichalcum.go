@@ -12,7 +12,13 @@ import (
 
 func main() {
 
-		  var thisLog OriLog
+		  thisLog := OriLog{}
+
+		  LoadLog(".orichalcum/log", &thisLog)
+
+		  PrintFileLog(&thisLog.FileEntries)
+		  UpdateOriDir(".", &thisLog)
+		  PrintFileLog(&thisLog.FileEntries)
 
 		  WriteLog(&thisLog, ".")
 
@@ -145,11 +151,11 @@ func UpdateOriDir(rootdir string, logHandle *OriLog) {
 					 // if the path is a dir, recuse into the dir to keep iterating over every file
 					 if filesAndDirs[i].IsDir() {
 								newRootDir := strings.Join([]string{rootdir, filesAndDirs[i].Name()}, "/")
-								printFilenames(newRootDir)
+								UpdateOriDir(newRootDir, logHandle)
 					 } else {
 					 // If the path is a file, update the file entry in the log handle.
 								path := strings.Join([]string{rootdir, filesAndDirs[i].Name()}, "/")
-								UpdateFileEntry(&logHandle.FileEntries, path)
+								UpdateFileEntry(&(logHandle.FileEntries), path)
 					 }
 		  }
 }
@@ -165,14 +171,18 @@ type OriLog struct {
 // Information about the orichalcum directory itself.
 type OriMeta struct {
 		  DateInit int64
+		  DateMod int64
 		  DefualtVaultPath string
+
+		  secret string
+
 }
 
 // Infomation about a given file
 type OriFile struct {
 		  Path string // path relative to the root of the ori directory
-		  Hash [sha512.Size]byte // 
-		  Datemod int64
+		  Hash [sha512.Size]byte
+		  DateMod int64
 
 		  DateCreated int64
 
@@ -206,19 +216,21 @@ const (
 
 func TrackFile(fSlice *[]OriFile, path string) {//TODO error
 		  newEntry := OriFile{
-										  Path: path,
-										  Hash: HashFile(path),
-										  DateCreated: time.Now().Unix(),
-										  Datemod: time.Now().Unix(),
-		  }
+								Path: path,
+								Hash: HashFile(path),
+								DateCreated: time.Now().Unix(),
+								DateMod: time.Now().Unix(),
+								}
 
 		  *fSlice = append(*fSlice, newEntry)
 }
 
 func UpdateTrackedFile(entry *OriFile) {
-		  entry.Datemod = time.Now().Unix()
-		  entry.Hash = HashFile(entry.Path)
-/*
+		  if entry.Hash != HashFile(entry.Path) { 
+					 entry.DateMod = time.Now().Unix()
+					 entry.Hash = HashFile(entry.Path)
+		  }
+		  /*
 		  if *entry.IsArc == true {
 					 ArcFile(entry.Path, entry.Archive)
 		  }
@@ -273,15 +285,40 @@ func HashFile(filename string) [sha512.Size]byte{
 		  return hash 
 }
 
+//TODO this function may not be necessairy
 // for a file path and an entry, compare if the file is the same or not, true == same hash
 func CompareFileHash(filePath string, fileEntry *OriFile) bool {
 		  newHash := HashFile(filePath) 
 		  oldHash := fileEntry.Hash
-		  // TODO would oldHash == newHash be valid?
-		  for i := 0; i < sha512.Size; i++ {
-					 if newHash[i] != oldHash[i] {
-								return false
-					 }
+
+		  if newHash == oldHash {
+					 return true
+		  } else {
+					 return false
 		  }
-		  return true
+}
+
+// Meta information
+
+func OnUpdate(logHandle *OriLog) {
+		  logHandle.Meta.DateMod = time.Now().Unix()
+}
+
+// UI
+
+func PrintFileEntry(handle *OriFile) {
+		  fmt.Println(handle.Path)
+		  dateCreate := time.Unix(handle.DateCreated, 0)
+		  dateMod := time.Unix(handle.DateMod, 0)
+		  fmt.Println("File created:  ", dateCreate)
+		  fmt.Println("File modified:  ", dateMod)
+		  fmt.Println("Is this file archived:", handle.IsArc)
+}
+
+func PrintFileLog(handle *[]OriFile) {
+		  length := len(*handle)
+
+		  for i := 0; i < length; i++ {
+					 PrintFileEntry(&(*handle)[i])
+		  }
 }
