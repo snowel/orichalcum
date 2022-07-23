@@ -3,22 +3,18 @@ package main
 import (
 		  "fmt"
 		  "os"
+		  "log"
 		  "strings"
 		  "time"
-
-
 		  "encoding/json"
+		  "crypto/sha512"
 )
 
 func main() {
 
+		  var thisLog OriLog
 
-		  testFile1 := OriFile{Path: "./nice", IsArc: false}
-		  testFile2 := OriFile{Path: "./words/loce", IsArc: true}
-
-		  test := OriLog{FileEntries: []OriFile{testFile1, testFile2}}
-
-		  writeFileLog(&test, ".")
+		  WriteLog(&thisLog, ".")
 
 		  //if IsOriDir("."){ 
 		//			 fmt.Println("Ori dir!")
@@ -28,15 +24,20 @@ func main() {
 }
 
 
-// CUE read
+// JSON read
 
-// CUE/JSON write
+func LoadLog(OriLogPath string, logHandle *OriLog) {
+		  fileBytes := OpenFile(OriLogPath)
+		  json.Unmarshal(fileBytes, logHandle)
+}
 
-func writeFileLog(files *OriLog, path string) {
+// JSON write
+
+func WriteLog(logHandle *OriLog, path string) {
 
 		  oriRoot := WhereIsOriDir(path)
 
-		  jfile, ok := json.Marshal(*files)
+		  jfile, ok := json.Marshal(*logHandle)
 		  if ok != nil {
 					 fmt.Println("Something went wrong.")
 		  }
@@ -48,7 +49,6 @@ func writeFileLog(files *OriLog, path string) {
 }
 
 // Check dir
-
 func IsOriDir(path string) bool {
 		  pathFiles, _ := os.ReadDir(path)
 
@@ -67,6 +67,7 @@ func IsOriDir(path string) bool {
 		  return IsOriDir(newPath)
 }
 
+// Retruns the path to the root of the orichalcum directory.
 func WhereIsOriDir(path string) string {// add error
 		  pathFiles, _ := os.ReadDir(path)
 
@@ -87,13 +88,13 @@ func WhereIsOriDir(path string) string {// add error
 }
 
 
-
 //is there an orichalcum dir in the sub directories of a dir
 func ContainsOriDir(path string) bool {
 		  
 		  return true		  
 }
 
+// If there this is not a .orichalcum/ directory anywhere aboce the curent directory, init one with the current dir as ori-root.
 func InitOriDir() {
 		  if IsOriDir(".") {
 					 fmt.Println("This is already an orichalcum directory.")
@@ -101,14 +102,12 @@ func InitOriDir() {
 		  }
 
 		  ok := os.Mkdir(".orichalcum", 0777)// permissions are messed up 
-
 		  if ok != nil {
 					 fmt.Println("Somethign went wrong...")
 		  }
 }
 
 // recursive walk
-
 func printFilenames(rootdir string) {
 		  filesAndDirs, ok := os.ReadDir(rootdir)
 
@@ -130,26 +129,61 @@ func printFilenames(rootdir string) {
 		  }
 }
 
-// files structs
+//TODO if i sync from a differnt directory the path to the root ori with bee differnt from a diferent sync...
+// I need to pull out the patht to root before runnitn thought the filepaths
+// i.e. rootdir needs to alway be the same insice of the Update function
+func UpdateOriDir(rootdir string, logHandle *OriLog) {
+		  //Open a file slice
+		  filesAndDirs, ok := os.ReadDir(rootdir)
+		  if ok != nil {
+					 fmt.Println("Something went wrong...")
+					 return
+		  }
+
+		  length := len(filesAndDirs)
+		  for i := 0; i < length; i++ {
+					 // if the path is a dir, recuse into the dir to keep iterating over every file
+					 if filesAndDirs[i].IsDir() {
+								newRootDir := strings.Join([]string{rootdir, filesAndDirs[i].Name()}, "/")
+								printFilenames(newRootDir)
+					 } else {
+					 // If the path is a file, update the file entry in the log handle.
+								path := strings.Join([]string{rootdir, filesAndDirs[i].Name()}, "/")
+								UpdateFileEntry(&logHandle.FileEntries, path)
+					 }
+		  }
+}
+
+// file structs
+
+// The information which orichalcum will save in the .orichalcum directory.
 type OriLog struct {
 		  FileEntries []OriFile
 		  Meta OriMeta
 }
 
+// Information about the orichalcum directory itself.
 type OriMeta struct {
 		  DateInit int64
+		  DefualtVaultPath string
 }
 
+// Infomation about a given file
 type OriFile struct {
 		  Path string // path relative to the root of the ori directory
+		  Hash [sha512.Size]byte // 
 		  Datemod int64
 
 		  DateCreated int64
 
 		  IsArc bool // file has auto archive option enables
-		  Archive *OriArc
-} 
+		  Mode ArcMode
+		  IsRED bool // the archived copies are saved as Redundate Error-protected Digital copies
+		  SizeChangeThresh uint // every time the file is changed a copy is saved to a vault
+		  VaultDirs []string
+}
 
+// Informaiton about an archive. Used for setting the archive option on an OriFile entry.
 type OriArc struct {
 		  Mode ArcMode
 		  IsRED bool // the archived copies are saved as Redundate Error-protected Digital copies
@@ -157,44 +191,97 @@ type OriArc struct {
 		  VaultDirs []string
 }
 
+// Enum for setting the type of auto-archiving.
 type ArcMode int
-
 const (
 		  None ArcMode = iota
 		  Total 
 		  Daily
 		  Weekly
 		  Montly
-		  SizeChange// for a size change threshold
+		  SizeChange// for a size change threshold - Size change is in both directions.
 )
 
 // per file hash + object create/update
 
-
-func CreateFileEntry(fSlice []OriFile, dir string) {//TODO error
+func TrackFile(fSlice *[]OriFile, path string) {//TODO error
 		  newEntry := OriFile{
-										  Path: dir,
+										  Path: path,
+										  Hash: HashFile(path),
 										  DateCreated: time.Now().Unix(),
-										  IsArc: false
+										  Datemod: time.Now().Unix(),
 		  }
 
-		  fSlice = fSlice.append(newEntry)
+		  *fSlice = append(*fSlice, newEntry)
 }
 
-func UpdateFileEntry(entry *OriFile) {
-		  *entry.Datemod = time.Now().Unix()
+func UpdateTrackedFile(entry *OriFile) {
+		  entry.Datemod = time.Now().Unix()
+		  entry.Hash = HashFile(entry.Path)
+/*
+		  if *entry.IsArc == true {
+					 ArcFile(entry.Path, entry.Archive)
+		  }
+*/
+}
+
+func UpdateFileEntry(fSlice *[]OriFile, path string) {
+		  length := len(*fSlice)
+
+		  for i := 0; i < length; i++ {
+					 if (*fSlice)[i].Path == path {
+								UpdateTrackedFile(&(*fSlice)[i])
+								return
+					 }
+		  }
+
+		  TrackFile(fSlice, path)
+}
+
+
+func SetArc(entry *OriFile, settings *OriArc) {
+
+		  entry.Mode = settings.Mode
+		  entry.IsRED = settings.IsRED
+		  entry.VaultDirs = settings.VaultDirs
+		  entry.SizeChangeThresh = settings.SizeChangeThresh
+}
+
+
+// Hash utils
+func OpenFile(filename string) []byte{
+
+		  f, ok := os.ReadFile(filename)
 		  
-		  if *entry.IsBool == true {
-					 ArchFile(*entry.Path)
+		  if ok != nil {
+					 log.Fatal(ok)
 		  }
+
+		  return f 
 }
 
-func SetArch(entry *OriFile, red bool, mode ArcMode) {
-		  //mode enum?
+// for a filepath, retrun the byte array of the hsha512 sum
+func HashFile(filename string) [sha512.Size]byte{
 
-		  entry.Archive.Mode = mode
+		  f, ok := os.ReadFile(filename)
+		  
+		  if ok != nil {
+					 log.Fatal(ok)
+		  }
+		  
+		  hash := sha512.Sum512(f)
+		  return hash 
 }
 
-// per dir create/update ???
-
-
+// for a file path and an entry, compare if the file is the same or not, true == same hash
+func CompareFileHash(filePath string, fileEntry *OriFile) bool {
+		  newHash := HashFile(filePath) 
+		  oldHash := fileEntry.Hash
+		  // TODO would oldHash == newHash be valid?
+		  for i := 0; i < sha512.Size; i++ {
+					 if newHash[i] != oldHash[i] {
+								return false
+					 }
+		  }
+		  return true
+}
