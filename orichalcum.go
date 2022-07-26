@@ -11,34 +11,39 @@ import (
 )
 
 func main() {
+		  thisLog := OriLog{}// Need this no matter what
+		  var rootDir string
+		  if IsOriDir(".") {
+					 rootDir = WhereIsOriDir(".")
+					 LoadLog(rootDir, &thisLog)
+		  } else {
+					 InitOriDir()
+		  }
 
-		  thisLog := OriLog{}
+		  fmt.Println(rootDir)
 
-		  LoadLog(".orichalcum/log", &thisLog)
-
+		  fmt.Println("Before update  --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---")
 		  PrintFileLog(&thisLog.FileEntries)
-		  UpdateOriDir(".", &thisLog)
+		  fmt.Println(rootDir)
+		  UpdateOriDir(rootDir, &thisLog)
+		  fmt.Println("After update  --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---")
 		  PrintFileLog(&thisLog.FileEntries)
 
 		  WriteLog(&thisLog, ".")
 
-		  //if IsOriDir("."){ 
-		//			 fmt.Println("Ori dir!")
-		 // }
-		  //printFilenames(".")
+		  files := RecursiveWalk(rootDir, len(rootDir))
+		  fmt.Println(files)
 		  //fmt.Println("Orichalcum.") the original, total functionality of this program's first install 
 }
 
 
 // JSON read
-
-func LoadLog(OriLogPath string, logHandle *OriLog) {
-		  fileBytes := OpenFile(OriLogPath)
+func LoadLog(oriroot string, logHandle *OriLog) {
+		  fileBytes := OpenFile(oriroot + "/.orichalcum/log")
 		  json.Unmarshal(fileBytes, logHandle)
 }
 
 // JSON write
-
 func WriteLog(logHandle *OriLog, path string) {
 
 		  oriRoot := WhereIsOriDir(path)
@@ -54,7 +59,7 @@ func WriteLog(logHandle *OriLog, path string) {
 		  
 }
 
-// Check dir
+// Check if a directory is aprt of an ori repo.
 func IsOriDir(path string) bool {
 		  pathFiles, _ := os.ReadDir(path)
 
@@ -74,11 +79,10 @@ func IsOriDir(path string) bool {
 }
 
 // Retruns the path to the root of the orichalcum directory.
-func WhereIsOriDir(path string) string {// add error
+func WhereIsOriDir(path string) string {
 		  pathFiles, _ := os.ReadDir(path)
 
 		  length := len(pathFiles)
-
 		  for i := 0; i < length; i++ {
 					 if pathFiles[i].Name() == ".orichalcum" && pathFiles[i].IsDir() {
 								return path
@@ -113,7 +117,31 @@ func InitOriDir() {
 		  }
 }
 
-// recursive walk
+// Recursive walk returning every file under the ori-root in pairs.
+// Both the path relative to the working dir and the absolute path from the working dir "."
+func RecursiveWalk(rootdir string, pathDif int) []PathPair {
+		  filesAndDirs, ok := os.ReadDir(rootdir)
+		  if ok != nil {
+					 fmt.Println("Something went wrong...")
+					 return []PathPair{}
+		  }
+
+		  var files []PathPair
+		  length := len(filesAndDirs)
+		  for i := 0; i < length; i++ {
+					 if filesAndDirs[i].IsDir() {
+								newRootDir := []string{rootdir, filesAndDirs[i].Name()}
+								files = append(files, RecursiveWalk(strings.Join(newRootDir, "/"), pathDif)...)
+					 } else {
+								path := strings.Join([]string{rootdir, filesAndDirs[i].Name()}, "/")
+								absPath := "." + path[pathDif:]
+								pathPair := PathPair{path: path, absPath: absPath}
+								files = append(files, pathPair)
+					 }
+		  }
+		  return files
+}
+
 func printFilenames(rootdir string) {
 		  filesAndDirs, ok := os.ReadDir(rootdir)
 
@@ -135,32 +163,72 @@ func printFilenames(rootdir string) {
 		  }
 }
 
-//TODO if i sync from a differnt directory the path to the root ori with bee differnt from a diferent sync...
-// I need to pull out the patht to root before runnitn thought the filepaths
-// i.e. rootdir needs to alway be the same insice of the Update function
-func UpdateOriDir(rootdir string, logHandle *OriLog) {
-		  //Open a file slice
-		  filesAndDirs, ok := os.ReadDir(rootdir)
-		  if ok != nil {
-					 fmt.Println("Something went wrong...")
-					 return
+func UpdateOriDir(dir string, logHandle *OriLog) {
+		  files := RecursiveWalk(dir, len(dir))
+		  length := len(files)
+		  for i := 0; i < length; i++ {
+					 UpdateFileEntry(&(logHandle.FileEntries), files[i])
+		  }
+}
+
+// create/update file entries
+// The path is the actual path from the working directory to the file
+// the absPath is the absolute path from the oriroot to the file, the one used as a name in the log
+func TrackFile(fSlice *[]OriFile, path PathPair) {//TODO error
+		  newEntry := OriFile{
+								Path: path.absPath,
+								Hash: HashFile(path.path),
+								DateCreated: time.Now().Unix(),
+								DateMod: time.Now().Unix(),
+								}
+
+		  *fSlice = append(*fSlice, newEntry)
+}
+
+func UpdateTrackedFile(entry *OriFile, path PathPair) {
+		  if entry.Hash != HashFile(path.path) { 
+					 entry.DateMod = time.Now().Unix()
+					 entry.Hash = HashFile(path.path)
+		  }
+		  /*
+		  if *entry.IsArc == true {
+					 ArcFile(entry.Path, entry.Archive)
+		  }
+*/
+}
+
+func UpdateFileEntry(fSlice *[]OriFile, path PathPair) {
+		  length := len(*fSlice)
+
+		  for i := 0; i < length; i++ {
+					 if (*fSlice)[i].Path == path.absPath {
+								UpdateTrackedFile(&(*fSlice)[i], path)
+								return
+					 }
 		  }
 
-		  length := len(filesAndDirs)
+		  TrackFile(fSlice, path)
+}
+
+// Remove a file entry from the log.
+func UntrackDeletedFiles(fileList []string, handle *OriLog) {
+
+		  entry := &handle.FileEntries
+
+		  length := len(*entry)
 		  for i := 0; i < length; i++ {
-					 // if the path is a dir, recuse into the dir to keep iterating over every file
-					 if filesAndDirs[i].IsDir() {
-								newRootDir := strings.Join([]string{rootdir, filesAndDirs[i].Name()}, "/")
-								UpdateOriDir(newRootDir, logHandle)
-					 } else {
-					 // If the path is a file, update the file entry in the log handle.
-								path := strings.Join([]string{rootdir, filesAndDirs[i].Name()}, "/")
-								UpdateFileEntry(&(logHandle.FileEntries), path)
+					 if !Contains(fileList, (*entry)[i].Path) {
+								*entry = append((*entry)[:i], (*entry)[i+1:]...)
 					 }
 		  }
 }
 
 // file structs
+
+type PathPair struct {
+		  path string // The relative path from the working directory. Needed for accessing the file (i.e. to hash)
+		  absPath string // The absolute path from the oriroot. Used to name the file in the log.
+}
 
 // The information which orichalcum will save in the .orichalcum directory.
 type OriLog struct {
@@ -173,10 +241,19 @@ type OriMeta struct {
 		  DateInit int64
 		  DateMod int64
 		  DefualtVaultPath string
+		  Type OriKind
+		  ID string // Identifes, a repo. This ID should be the same for a backup of the repo. 
 
-		  secret string
+		  secret string// Key which identifies an ori-repo. When syncing orichalcum will check for matching repos with a pulbic key and use this secret to decrypt files sent
 
 }
+
+type OriKind int // The kind of orichalcum dir.
+const (
+		  Normal OriKind = iota
+		  Static // A Directory of files which don't or aren't supposed to change.
+		  Backup // A Backup ori repo is not meant to have any edits made within it, but only accept edits from syncing another oridir.
+)
 
 // Infomation about a given file
 type OriFile struct {
@@ -210,46 +287,8 @@ const (
 		  Weekly
 		  Montly
 		  SizeChange// for a size change threshold - Size change is in both directions.
+		  Manual
 )
-
-// per file hash + object create/update
-
-func TrackFile(fSlice *[]OriFile, path string) {//TODO error
-		  newEntry := OriFile{
-								Path: path,
-								Hash: HashFile(path),
-								DateCreated: time.Now().Unix(),
-								DateMod: time.Now().Unix(),
-								}
-
-		  *fSlice = append(*fSlice, newEntry)
-}
-
-func UpdateTrackedFile(entry *OriFile) {
-		  if entry.Hash != HashFile(entry.Path) { 
-					 entry.DateMod = time.Now().Unix()
-					 entry.Hash = HashFile(entry.Path)
-		  }
-		  /*
-		  if *entry.IsArc == true {
-					 ArcFile(entry.Path, entry.Archive)
-		  }
-*/
-}
-
-func UpdateFileEntry(fSlice *[]OriFile, path string) {
-		  length := len(*fSlice)
-
-		  for i := 0; i < length; i++ {
-					 if (*fSlice)[i].Path == path {
-								UpdateTrackedFile(&(*fSlice)[i])
-								return
-					 }
-		  }
-
-		  TrackFile(fSlice, path)
-}
-
 
 func SetArc(entry *OriFile, settings *OriArc) {
 
@@ -285,27 +324,12 @@ func HashFile(filename string) [sha512.Size]byte{
 		  return hash 
 }
 
-//TODO this function may not be necessairy
-// for a file path and an entry, compare if the file is the same or not, true == same hash
-func CompareFileHash(filePath string, fileEntry *OriFile) bool {
-		  newHash := HashFile(filePath) 
-		  oldHash := fileEntry.Hash
-
-		  if newHash == oldHash {
-					 return true
-		  } else {
-					 return false
-		  }
-}
-
 // Meta information
-
 func OnUpdate(logHandle *OriLog) {
 		  logHandle.Meta.DateMod = time.Now().Unix()
 }
 
 // UI
-
 func PrintFileEntry(handle *OriFile) {
 		  fmt.Println(handle.Path)
 		  dateCreate := time.Unix(handle.DateCreated, 0)
@@ -321,4 +345,17 @@ func PrintFileLog(handle *[]OriFile) {
 		  for i := 0; i < length; i++ {
 					 PrintFileEntry(&(*handle)[i])
 		  }
+}
+
+// Better would be slices lib. Developing withou network connection.
+func Contains[E comparable](slice []E, elem E) bool {
+		  length := len(slice)
+
+		  for i := 0; i < length; i++ {
+					 if slice[i] == elem {
+								return true
+					 }
+		  }
+
+		  return false
 }
