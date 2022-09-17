@@ -66,7 +66,8 @@ func IsOriDir(path string) bool {
 					 if pathFiles[i].Name() == ".orichalcum" && pathFiles[i].IsDir() {
 								return true
 					 }
-					 if pathFiles[i].Name() == "home" && pathFiles[i].IsDir() { // not sure how to best stop searhcing up, will probably be a config
+					 //TODO not sure how to best stop searhcing up, will probably be a config
+					 if pathFiles[i].Name() == "home" && pathFiles[i].IsDir() {
 								return false
 					 }
 		  }
@@ -75,7 +76,7 @@ func IsOriDir(path string) bool {
 		  return IsOriDir(newPath)
 }
 
-// Retruns the path to the root of the orichalcum directory.
+// Returns the path to the root of the Orichalcum directory.
 func WhereIsOriDir(path string) string {
 		  pathFiles, _ := os.ReadDir(path)
 
@@ -115,13 +116,13 @@ func InitOriDir() {
 					 fmt.Println("Somethign went wrong...")
 		  }
 		  // Make the Vault folder
-		  ok := os.Mkdir(".orichalcum/vault", 0777)
+		  ok = os.Mkdir(".orichalcum/vault", 0777)
 		  if ok != nil {
 					 fmt.Println("Somethign went wrong...")
 		  }
 
 		  // Make the RED Folder
-		  ok := os.Mkdir(".orichalcum/red", 0777)// permissions are messed up 
+		  ok = os.Mkdir(".orichalcum/red", 0777)// permissions are messed up 
 		  if ok != nil {
 					 fmt.Println("Somethign went wrong...")
 		  }
@@ -166,7 +167,6 @@ func RecursiveWalk(rootdir string, pathDif int) []PathPair {
 
 func printFilenames(rootdir string) {
 		  filesAndDirs, ok := os.ReadDir(rootdir)
-
 		  if ok != nil {
 					 fmt.Println("Something went wrong...")
 					 return
@@ -305,19 +305,19 @@ const (
 		  Backup // A Backup ori repo is not meant to have any edits made within it, but only accept edits from syncing another oridir.
 )
 
-// Infomation about a given file
+// Infomation about a given file, as tracked by Orichalcum.
 type OriFile struct {
-		  Path string // Path relative to the root of the ori directory
+		  Path string // Path relative to the root of the ori repo.
 		  Hash [sha512.Size]byte // SHA512 hash sum
 		  DateMod int64
 		  DateCreated int64
 		  Size int64 // Size of the file in bytes
 
-		  IsArc bool // file has auto archive option enables
+		  IsArc bool // File has auto archive option enabled or not.
 		  Mode ArcMode
-		  IsRED bool // A single copy is saved in the vault upon each file change which is RED protected. Originally: the archived copies are saved as Redundate Error-protected Digital copies
+		  IsRED bool // A single copy is saved in the vault upon each file change which is RED protected.
 		  REDFactor uint //How heavily is the files bits redundacified? (Factors of 8. I.e. if the factor is 10, the file is 80x the size)
-		  SizeChangeThresh uint // every time the file is changed a copy is saved to a vault
+		  SizeChangeThresh uint // every time the file is changed a copy is saved to a vault if the difference in size is greater than or equal to this threshold.
 		  InteriorVaultDir string // Directory within the ori-repo which hosts the file's archives.
 		  ExteriorVaultDirs []string // Directories outside of the ori-repo where backups are stored.
 }
@@ -344,7 +344,7 @@ const (
 
 type UnixPeriod int64
 const (
-		  Day UnixPeriod = 86400 // Days should behave based on date. One backup per calender day.
+		  Day UnixPeriod = 86400 // TODO Days should behave based on date. One backup per calender day.
 		  Week UnixPeriod = 604800
 		  Month UnixPeriod = 2628000
 )
@@ -362,11 +362,9 @@ func SetArc(entry *OriFile, settings *OriArc) {
 func OpenFile(filename string) []byte{
 
 		  f, ok := os.ReadFile(filename)
-		  
 		  if ok != nil {
 					 log.Fatal(ok)
 		  }
-
 		  return f 
 }
 
@@ -374,15 +372,8 @@ func FileSize(filename string) int64 {
 		  return os.Stat(filename).Size() 
 }
 
-// for a filepath, retrun the byte array of the hsha512 sum
 func HashFile(filename string) [sha512.Size]byte{
-
-		  f, ok := os.ReadFile(filename)
-		  
-		  if ok != nil {
-					 log.Fatal(ok)
-		  }
-		  
+		  f := OpenFile(filename)
 		  hash := sha512.Sum512(f)
 		  return hash 
 }
@@ -522,7 +513,7 @@ func SetArch(file string, oriroot string, ori *OriLog) {
 		  }
 
 		  // Sets the internal vault
-		  tracked.InteriorVaultDir = ori.Meta.DefaultVaultDir
+		  tracked.InteriorVaultDir = ori.Meta.DefaultVaultPath
 
 		  // Sets external vaults
 }
