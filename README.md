@@ -1,18 +1,14 @@
 # Orichalcum
 
+![alt text](./assets/logo.png "Orichalcum")
+
 *Minimally Aggressive/Obtrusive File Automation and Organisation*
 
 Welcome to Orichalcum! Orichalcum is a simple tool made to "manually" track files. It simplifies archving copies of files, keeping backups of repos and tracking files. 
 
 ## Quick-star Installation
 
-*Don't.* Orichalcum is a simple tool and will be availble soon, but is not nearly production ready.
-
-Orichalcum is a simply tool to keep track of files in a (mostly) manual way. It offers a subset of functionality provided by many other tools which (in theory) make it transaprent what is giong on with your files, and defers the actual management of those files to you. Its core featuers include:
-* Keeping tracked of changed files
-* Creating copies of files under certain given conconditions
-* Creating backups of a repo which can be manually updated to match your main "working" repo
-* Keeping multiple repos coherent with eachother
+*Don't.* Orichalcum is a simple tool and will be availble soon, but is not nearly production ready. But... if that won't stop you, a quick `git clone && cd orichalcum/ && go install` should get you where you're going!
 
 ## Feature tracker
 NOTE: Orichalcum is still very immature. Many features are implemented and fully functional but will likely be redone to match the overall codebase as the project grows.
