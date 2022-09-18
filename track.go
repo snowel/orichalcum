@@ -8,63 +8,58 @@ import (
 		  "time"
 )
 
-// Check if a directory is aprt of an ori repo.
-func IsOriDir(path string) bool {
-		  pathFiles, _ := os.ReadDir(path)
-
-		  length := len(pathFiles)
-
-		  for i := 0; i < length; i++ {
-					 if pathFiles[i].Name() == ".orichalcum" && pathFiles[i].IsDir() {
-								return true
-					 }
-					 //TODO not sure how to best stop searhcing up, will probably be a config
-					 if pathFiles[i].Name() == "home" && pathFiles[i].IsDir() {
-								return false
-					 }
-		  }
-
-		  newPath := strings.Join([]string{path, ".."}, "/")
-		  return IsOriDir(newPath)
-}
-
-// Returns the path to the root of the Orichalcum directory.
-func WhereIsOriDir(path string) string {
-		  pathFiles, _ := os.ReadDir(path)
-
-		  length := len(pathFiles)
-		  for i := 0; i < length; i++ {
-					 if pathFiles[i].Name() == ".orichalcum" && pathFiles[i].IsDir() {
-								return path
-					 }
-		  }
-
-		  newPath := strings.Join([]string{path, ".."}, "/")
-		  return WhereIsOriDir(newPath) 
-}
-
 
 // Determins if the given, working directory is the root of an ori repo.
-func IsOriRoot(working string) bool, []string {
+// Returns the bool and all other directories in ori root (for downwards search)
+func IsOriRoot(working string) (bool, []string) {
 		  pathFiles, _ := os.ReadDir(wokring)
 
 		  length := len(pathFiles)
 		  var subDirs []string
+		  ans := false
 
 		  for i := 0; i < length; i++ {
 					 if pathFiles[i].Name() == ".orichalcum" && pathFiles[i].IsDir() {
-								return true, subDirs
+								// One way switch
+								ans = true
 					 }
 					 // collect all sub directories
 					 if pathFiles[i].IsDir() {
 								subDirs = append(subdirs, pathFiles[i].Name())
 					 }
 		  }
-		  return false, subDirs
+		  return ans, subDirs
 }
 
+// Check if a directory is aprt of an ori repo.
+func IsOriRepo(working string) bool {
+		  current, other := IsOriRoot(working)
+
+		  if current {
+					 return true
+		  } else if Contains(other, "home") { // Stops searching wehn reaching the root dir TODO cleaner
+					 return false
+		  }
+
+		  newPath := strings.Join([]string{working, ".."}, "/")
+		  return IsOriRepo(newPath)
+}
+
+// Returns the path to the root of the Orichalcum repo from the working dir.
+// Previously WhereIsOriRepo
+func WhereIsOriRoot(working string) string {
+		  if ans, _ IsOriRoot(working); ans {
+					 return working
+		  }
+
+		  newPath := strings.Join([]string{working, ".."}, "/")
+		  return WhereIsOriRepo(newPath) 
+}
+
+
+
 // Determins if the any of the subdirectories of the working directory are the roots of an ori repo. 
-func ContainsOriRoot(working ...string) bool {
+func ContainsOriRepo(working ...string) bool {
 		  var subDirs []string
 		  for _, dir := range working {
 
@@ -76,20 +71,20 @@ func ContainsOriRoot(working ...string) bool {
 					 if len(subDirs) == 0 {
 								return false
 					 } else {
-								return ContainsOriRoot(subDirs...)
+								return ContainsOriRepo(subDirs...)
 					 }
 }
 
 // If this is not a .orichalcum/ directory anywhere aboce the curent directory, init one with the current dir as ori-root.
 func InitOriDir() {
 		  // Check that the current working-dir is not part of an ori-repo.
-		  if IsOriDir(".") {
+		  if IsOriRepo(".") {
 					 fmt.Println("This is already an orichalcum directory.")
 					 return
 		  }
 
 		  // Make the hidden folder.
-		  ok := os.Mkdir(".orichalcum", 0777)// permissions are messed up 
+		  ok := os.Mkdir(".orichalcum", 0777)
 		  if ok != nil {
 					 fmt.Println("Somethign went wrong...")
 		  }
@@ -100,7 +95,7 @@ func InitOriDir() {
 		  }
 
 		  // Make the RED Folder
-		  ok = os.Mkdir(".orichalcum/red", 0777)// permissions are messed up 
+		  ok = os.Mkdir(".orichalcum/red", 0777)
 		  if ok != nil {
 					 fmt.Println("Somethign went wrong...")
 		  }

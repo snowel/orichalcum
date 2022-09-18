@@ -6,76 +6,33 @@ import (
 		  "log"
 		  "strings"
 		  "time"
-		  "encoding/json"
-		  "crypto/sha512"
 )
 
 func main() {
-		  thisLog := OriLog{}// Need this no matter what
-		  var oriRoot string
-		  if IsOriDir(".") {
-					 oriRoot = WhereIsOriDir(".")
-					 LoadLog(oriRoot, &thisLog)
+		  sessionLog := OriLog{}// Need this no matter what
+		  var toOriRoot string
+		  if IsOriRepo(".") {
+					 toOriRoot = WhereIsOriRoot(".")
+					 LoadLog(toOriRoot, &sessionLog)
 		  } else {
 					 InitOriDir()
 		  }
 
-		  fmt.Println(oriRoot)
+		  fmt.Println(toOriRoot)
 
 		  fmt.Println("Before update  --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---")
-		  PrintFileLog(&thisLog.FileEntries)
-		  fmt.Println(oriRoot)
-		  UpdateOriDir(oriRoot, &thisLog)
+		  PrintFileLog(&sessionLog.FileEntries)
+		  fmt.Println(toOriRoot)
+		  UpdateOriDir(toOriRoot, &sessionLog)
 		  fmt.Println("After update  --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---")
-		  PrintFileLog(&thisLog.FileEntries)
+		  PrintFileLog(&sessionLog.FileEntries)
 
-		  WriteLog(&thisLog, oriRoot)
+		  WriteLog(&sessionLog, toOriRoot)
 
 		  //fmt.Println("Orichalcum.") the original, total functionality of this program's first install 
 }
 
 
-// JSON read
-func LoadLog(oriroot string, logHandle *OriLog) {
-		  fileBytes := OpenFile(oriroot + "/.orichalcum/log")
-		  json.Unmarshal(fileBytes, logHandle)
-}
-
-// JSON write
-func WriteLog(logHandle *OriLog, oriRoot string) {
-
-		  jfile, ok := json.Marshal(*logHandle)
-		  if ok != nil {
-					 fmt.Println("Something went wrong.")
-		  }
-		  writeOk := os.WriteFile(oriRoot + "/.orichalcum/log", jfile, 0666)// TODO need a geenric fucntion to fetch the path of the root ori dir
-		  if writeOk != nil {
-					 fmt.Println("Something went wrong.")
-		  }
-		  
-}
-
-
-
-// Hash utils
-func OpenFile(filename string) []byte{
-
-		  f, ok := os.ReadFile(filename)
-		  if ok != nil {
-					 log.Fatal(ok)
-		  }
-		  return f 
-}
-
-func FileSize(filename string) int64 {
-		  return os.Stat(filename).Size() 
-}
-
-func HashFile(filename string) [sha512.Size]byte{
-		  f := OpenFile(filename)
-		  hash := sha512.Sum512(f)
-		  return hash 
-}
 
 // Meta information update on tracked file update.
 func OnUpdate(logHandle *OriLog) {
@@ -84,7 +41,7 @@ func OnUpdate(logHandle *OriLog) {
 
 //Find index of last occurence of a character in a string(for finding the name of the file without the path)
 
-// Better would be slices lib. Developing withou network connection.
+// Better would be slices lib. 
 func Contains[E comparable](slice []E, elem E) bool {
 		  length := len(slice)
 
@@ -97,12 +54,14 @@ func Contains[E comparable](slice []E, elem E) bool {
 		  return false
 }
 
-func PathpairContains(slice []PathPair, elem string, path int) bool {
+// For a given path pair, check it the absolute path or relative paths contain the searched elem.
+// Abs path is specified by 1 and rel by 2.
+func PathpairContains(slice []PathPair, elem string, path byte) bool {
 		  length := len(slice)
 
 		  if path == 1 {// abspath
 					 for i := 0; i < length; i++ {
-								if slice[i].asbPath == elem {
+								if slice[i].absPath == elem {
 										  return true
 								}
 					 }

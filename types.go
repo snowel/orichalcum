@@ -39,17 +39,17 @@ type OriFile struct {
 
 		  IsArc bool // File has auto archive option enabled or not.
 		  Mode ArcMode
-		  IsRED bool // A single copy is saved in the vault upon each file change which is RED protected.
-		  REDFactor uint //How heavily is the files bits redundacified? (Factors of 8. I.e. if the factor is 10, the file is 80x the size)
 		  SizeChangeThresh int64 // every time the file is changed a copy is saved to a vault if the difference in size is greater than or equal to this threshold.
 		  InteriorVaultDir string // Directory within the ori-repo which hosts the file's archives.
 		  ExteriorVaultDirs []string // Directories outside of the ori-repo where backups are stored.
+
+		  IsRED bool // A single copy is saved in the vault upon each file change which is RED protected.
+		  REDFactor uint //How heavily is the files bits redundacified? (Factors of 8. I.e. if the factor is 10, the file is 80x the size)
 }
 
 // Informaiton about an archive. Used for setting the archive option on an OriFile entry.
 type OriArc struct {
 		  Mode ArcMode
-		  IsRED bool // the archived copies are saved as Redundate Error-protected Digital copies
 		  SizeChangeThresh uint // every time the file is changed a copy is saved to a vault
 		  VaultDirs []string
 }
@@ -65,6 +65,7 @@ const (
 		  SizeChange// for a size change threshold - Size change is in both directions.
 )
 
+// Time periods in seconds (for unix time)
 type UnixPeriod int64
 const (
 		  Day UnixPeriod = 86400 // TODO Days should behave based on date. One backup per calender day.
