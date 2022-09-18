@@ -1,8 +1,6 @@
-# Orichalcum
-
 ![alt text](./assets/logo.png "Orichalcum")
-
-*Minimally Aggressive/Obtrusive File Automation and Organisation*
+# Orichalcum
+*Minimally Aggressive or Obtrusive File Automation and Organisation*
 
 Welcome to Orichalcum! Orichalcum is a simple tool made to "manually" track files. It simplifies archving copies of files, keeping backups of repos and tracking files. 
 
@@ -11,16 +9,15 @@ Welcome to Orichalcum! Orichalcum is a simple tool made to "manually" track file
 *Don't.* Orichalcum is a simple tool and will be availble soon, but is not nearly production ready. But... if that won't stop you, a quick `git clone && cd orichalcum/ && go install` should get you where you're going!
 
 ## Feature tracker
-NOTE: Orichalcum is still very immature. Many features are implemented and fully functional but will likely be redone to match the overall codebase as the project grows.
 
 * File Tracking
-  * Normal
-  * Static
+  * Normal / Static
   * Backup
 * Archive
 * Repo sync
   * Sync
-    * Normal/Static/backup
+    * Normal/Static
+	 * Backup
     * Index
   * OverLAN
 * Redundant Error-resistance
@@ -45,7 +42,7 @@ Archvies are automatically remaned to the filename prepended by the the date in 
 
 ## File Syncinc
 
-One core feature of Orichalcum is to synchronize different copies of the same repo across the same or multiple file-systems, without the need for a WAN connection.
+One core feature of Orichalcum is to synchronize different copies of the same repo across the same or multiple file-systems, without the need for a WAN connection or associated cloud service.
 
 ### Syncing bewteen same vs different repos
 
@@ -88,28 +85,6 @@ A repo back-up is simply a syncing done with similar automation to the file arch
 #### Back-up endpoints
 
 To make back-up easy, the location of back-up repos can be included as endpoints, these can be on the local system, on external drives or network storage, as long as your systems sees it as a directory.
-
-
-
-## Repo Types
-
-### Default
-
-A default ori repo is, as it sounds, the symplest system.
-
-### Backup
-
-A back-up directory is mean to have no changes made to it outside of syncing to another ori repo. A back-up repo can be listed as an back-up target for any repo and can automatically 
-
-### Static
-
-A static repo is eman for files which can be added moved or removed, but aren't emant to be modified. Things liek music collections, wallpaper folders and vacation photos make great candidates for static repos.
-
-### Index
-
-Likely dep. The index repo can be well served by an orichalcum function... Though partial syncing might eventually make it back into the system
-An index repo behave significantly differently than the others, by ddefault every file in the repo will be replaced by a text file containing the ori entry of that file from the source repo. 
-
 
 ## R.E.D or RED
 
