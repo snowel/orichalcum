@@ -44,10 +44,40 @@ func WhereIsOriDir(path string) string {
 }
 
 
-//is there an orichalcum dir in the sub directories of a dir
-func ContainsOriDir(path string) bool {
-		  
-		  return true		  
+// Determins if the given, working directory is the root of an ori repo.
+func IsOriRoot(working string) bool, []string {
+		  pathFiles, _ := os.ReadDir(wokring)
+
+		  length := len(pathFiles)
+		  var subDirs []string
+
+		  for i := 0; i < length; i++ {
+					 if pathFiles[i].Name() == ".orichalcum" && pathFiles[i].IsDir() {
+								return true, subDirs
+					 }
+					 // collect all sub directories
+					 if pathFiles[i].IsDir() {
+								subDirs = append(subdirs, pathFiles[i].Name())
+					 }
+		  }
+		  return false, subDirs
+}
+
+// Determins if the any of the subdirectories of the working directory are the roots of an ori repo. 
+func ContainsOriRoot(working ...string) bool {
+		  var subDirs []string
+		  for _, dir := range working {
+
+					 oriFound, partialSubDirs := IsOriRoot(dir)
+					 if oriFount {return oriFound}
+					 
+					 subDirs = append(subDirs, partialSubDirs...)
+		  }
+					 if len(subDirs) == 0 {
+								return false
+					 } else {
+								return ContainsOriRoot(subDirs...)
+					 }
 }
 
 // If this is not a .orichalcum/ directory anywhere aboce the curent directory, init one with the current dir as ori-root.

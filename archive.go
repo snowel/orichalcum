@@ -11,7 +11,10 @@ import (
 
 // Archiving
 
-func WriteArchiveCopy(entry *OriFile)// namimg will automate to ad _yyyymmdd_hhmmss, that could actually, temporarily serve to assure it's not overwiting another copy
+// Create an archive copy of a file
+func WriteArchiveCopy(entry *OriFile)
+// namimg will prepend yyyymmdd_hhmmss
+//that could actually, temporarily serve to assure it's not overwiting another copy
 
 // Check auto archiving properties and creates an archive copy if one of the qualities match.
 func AutoArchive(entry *OriFile, oldSize int64, previousEdit int64) {
