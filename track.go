@@ -3,7 +3,6 @@ package main
 import (
 		  "fmt"
 		  "os"
-		  "log"
 		  "strings"
 		  "time"
 )
@@ -12,26 +11,26 @@ import (
 // Determins if the given, working directory is the root of an ori repo.
 // Returns the bool and all other directories in ori root (for downwards search)
 func IsOriRoot(working string) (bool, []string) {
-		  pathFiles, _ := os.ReadDir(wokring)
+		  pathFiles, _ := os.ReadDir(working)
 
 		  length := len(pathFiles)
 		  var subDirs []string
 		  ans := false
 
 		  for i := 0; i < length; i++ {
-					 if pathFiles[i].Name() == ".orichalcum" && pathFiles[i].IsDir() {
+				   if pathFiles[i].Name() == ".orichalcum" && pathFiles[i].IsDir() {
 								// One way switch
 								ans = true
 					 }
 					 // collect all sub directories
 					 if pathFiles[i].IsDir() {
-								subDirs = append(subdirs, pathFiles[i].Name())
+								subDirs = append(subDirs, pathFiles[i].Name())
 					 }
 		  }
-		  return ans, subDirs
+			return ans, subDirs
 }
 
-// Check if a directory is aprt of an ori repo.
+// Check if a directory is part of an ori repo.
 func IsOriRepo(working string) bool {
 		  current, other := IsOriRoot(working)
 
@@ -48,14 +47,13 @@ func IsOriRepo(working string) bool {
 // Returns the path to the root of the Orichalcum repo from the working dir.
 // Previously WhereIsOriRepo
 func WhereIsOriRoot(working string) string {
-		  if ans, _ IsOriRoot(working); ans {
+		  if ans, _ := IsOriRoot(working); ans {
 					 return working
 		  }
 
 		  newPath := strings.Join([]string{working, ".."}, "/")
-		  return WhereIsOriRepo(newPath) 
+		  return WhereIsOriRoot(newPath) 
 }
-
 
 
 // Determins if the any of the subdirectories of the working directory are the roots of an ori repo. 
@@ -64,7 +62,7 @@ func ContainsOriRepo(working ...string) bool {
 		  for _, dir := range working {
 
 					 oriFound, partialSubDirs := IsOriRoot(dir)
-					 if oriFount {return oriFound}
+					 if oriFound {return oriFound}
 					 
 					 subDirs = append(subDirs, partialSubDirs...)
 		  }
@@ -109,7 +107,6 @@ func InitOriDir() {
 
 		  // Write the initial log
 		  WriteLog(&Initlog, ".")
-
 }
 
 
@@ -142,7 +139,7 @@ func UpdateOriDir(dir string, logHandle *OriLog) {
 		  files := RecursiveWalk(dir, len(dir))
 		  length := len(files)
 		  for i := 0; i < length; i++ {
-					 UpdateFileEntry(&(logHandle.FileEntries), files[i])
+					 UpdateFileEntry(logHandle, files[i])
 		  }
 }
 
@@ -178,44 +175,49 @@ func TrackFile(fSlice *[]OriFile, path PathPair) {//TODO error
 		  *fSlice = append(*fSlice, newEntry)
 }
 
-func UpdateTrackedFile(entry *OriFile, path PathPair) {
-		  if entry.Hash != HashFile(path.path) {
-					 oldSize := entry.Size
-					 oldEdit := entry.DateMod
-					 entry.DateMod = time.Now().Unix()
-					 entry.Hash = HashFile(path.path)
-					 entry.Size = FileSize(path.path) // TODO When i implement arc, this has to be updated later, as the size is important to size chance arhcive 
+func UpdateTrackedFile(entry *OriFile, orilog *OriLog, path PathPair) {
+	 newHash :=HashFile(path.path)  
+	 oldSize := entry.Size
+	 oldEdit := entry.DateMod
+	 rel := WhereIsOriRoot(".")// TODO might want to add a "vitual working dir" for the case where I'll be syncing etc
+	if entry.Hash != newHash {
+				 entry.DateMod = time.Now().Unix()
+				 entry.DateChanged = FileChanged(path.path).Unix() 
+				 entry.Hash = HashFile(path.path)
+				 entry.Size = FileSize(path.path) 
 		  }
-		  /*
-		  if *entry.IsArc == true {
-					 ArcFile(entry.Path, entry.Archive)
+		  
+		  if entry.IsArc == true {
+			  AutoArchive(entry, orilog, oldSize, oldEdit, rel)
 		  }
-*/
 }
 
-func UpdateFileEntry(fSlice *[]OriFile, path PathPair) {
-		  length := len(*fSlice)
+func UpdateFileEntry(orilog *OriLog, path PathPair) {
+	 fSlice := &(orilog.FileEntries)
+	 length := len(*fSlice)
 
-		  for i := 0; i < length; i++ {
-					 if (*fSlice)[i].Path == path.absPath {
-								UpdateTrackedFile(&(*fSlice)[i], path)
-								return
-					 }
-		  }
+	 for i := 0; i < length; i++ {
+	 if (*fSlice)[i].Path == path.absPath {
+			UpdateTrackedFile(&(*fSlice)[i],orilog, path)
+			return
+	 }
+}
 
 		  TrackFile(fSlice, path)
 }
 
 // Remove a file entry from the log.
+/*
 func UntrackDeletedFiles(fileList []string, handle *OriLog) {
 
-		  entry := &handle.FileEntries
+	 entry := &handle.FileEntries
 
-		  length := len(*entry)
-		  for i := 0; i < length; i++ {
-					 if !Contains(fileList, (*entry)[i].Path) {
-								*entry = append((*entry)[:i], (*entry)[i+1:]...)
-					 }
-		  }
+	 length := len(*entry)
+	 for i := 0; i < length; i++ {
+				if !Contains(fileList, (*entry)[i].Path) {
+						 *entry = append((*entry)[:i], (*entry)[i+1:]...)
+				}
+	 }
 }
 
+*/
