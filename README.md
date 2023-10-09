@@ -1,11 +1,10 @@
 ![alt text](./assets/logo.png "Orichalcum")
-# Orichalcum
-*Minimally Aggressive or Obtrusive File Automation and Organisation*
+# Orichalcum - The Meta-Filesystem
+*Minimally Obtrusive File Organisation*
 
 An axiomatic way to reason about manual file organization.
 
-Welcome to Orichalcum! Orichalcum is a simple tool made to "manually" track files. It simplifies archving copies of files, keeping backups of repos and tracking files. 
-Oricalcum is something like a VCS, but, rather than controlling versions, it controls state, making it possible to treat a given directory structure of files as one porta le unit.
+Welcome to Orichalcum! Orichalcum is a simple tool made to "manually" track and organize files. It simplifies archving copies of files, keeping backups of repos and tracking metadata across filesystems. 
 
 ## Quick-star Installation
 
@@ -17,7 +16,15 @@ Oricalcum is something like a VCS, but, rather than controlling versions, it con
   * Normal
   * Static
   * Backup
+* Meta
+  * Tags
+    * ID tags
+    * Directory tags
+* Functionality
+  * Duplicate search
+  * Symbolic links
 * Archive
+  * Generations
   * In repo
   * Non default
 * Repo sync
@@ -43,11 +50,11 @@ Please note that when we update a repo, which is to say update the infromatoin o
 
 The normal repo is, as it sounds, the default tool of Orichalcum, it will track files and keep informaiotn about itself and its files.
 
-#### Static Repos
+### Static Repos
 
-A repo can be set to static. Static repos does not *allow* modificaiton to files, which is to say, that on repo update, it will track new files, untrack deleted files, but if a previously tracked file has a different hashsum it will throw an error
+A repo can be set to static. Static repos does not *allow* modificaiton to files, which is to say, that on repo update, it will track new files, untrack deleted files, but if a previously tracked file has a different hashsum it will give a warning.
 
-Additionally, within static repos, on sync, a moved
+NOTE: Static repos where originally a different sort of object. Now, all repos will be the same (as far as internal logic is concerned), with local configs. A static repo is jsut a normal repo with the config to set all newly tracked files to static.
 
 #### Backup
 
@@ -55,11 +62,61 @@ In the future, there is consideratoin for creating what we call a backup repo, w
 
 At this point, for the sake of symplicity, this will remain an idea and nothing more.
 
+
+## Meta
+
+Part of tracking files involves tracking metadata. This includes tracking the metadata of the filesystem, as well as custom orichalcum metadata
+
+### Tags
+
+Tags are the general purpose way to strucutre any infromation about the file. This makes metadata extensible, without needing to accomodate new fields in the struct one could add any number of medata fields.
+
+Tags are organized as nested slices of strings. The first element is always a meta-meta-tag, showing what that sub slice's elements represent. The following are established meta-tags:
+
+|Meta-Tag|Description|
+|-|-|
+|id|Identiy tags: distinguis files from duplicates and track them as they move around the file systems|
+|dir|Direcroties where a file is located, absolute from ori root|
+|opt|Options regarding how the file is treated by orichalcum, backs the local config.|
+
+
+#### Identity
+
+In orichalcum, when a file is tracked it is given an ID, a random UUID which will give that file the notion of "uniqueness". The main use for this ID is to keep the same tracking entry regardless of if the file is moved: Originally the traching ID was the path name, in which case a renamed or moved file would be untracked and retracked, this way it is not.
+
+#### Directories
+
+Directories are added to the tags. This allows searching by directory or having operations over directories, etc.
+
+i.e. [oriroot]/ideas/programming/awesomeapp.md gets tracted and taged with "/", "/ideas/", "/ideas/programming/"
+
+## Functionality
+
+### Symbolic link
+
+Orichalculm has a built in form of symbolic link. Each file has a slice of alternative paths, these can be actuated in different ways:
+
+* Populate : The file is copied to all aternative directories
+* Populate placeholders : empty files with the names or the alternate paths are placed across the repo.
+* Populate directory : for a given directoy, expand the symlinked content.. ie. copy the files that refer to that directory
+* Depopulate working directory
+* Pull duplicates : for a given file, pull all duplicates to being symlinks of the current file.
+
+Reverse
+
+NOTE:: On sync, if there is a real file with the name of a symbolic link, a warning should be set, therefor population whould need to function acordingly. Or perhapse a seperate list of "populated" placeholders
+
 ## Archives
 
 While backups are "remote" copies of repos, archvies are copies of files, snapshots at certain points in time.
 
 Archvies are automatically remaned to the filename prepended by the the date in unix time. For manual archives, it is possible to anotate it with a filename appropriate string, which will be between the date and the original filename.
+
+### Generations
+
+Files tracked by orichalcum have a generations number, for that file, each time its orichalcum data is updated a version is caches in the hidden `.orichalcum` directory equal to the number of generations it is set to save.
+
+i.e. If a file (file.txt) has `generation = 2` and is tracked, a file named file.txt.gen1 will be created in the `.orichlacum/generations/<file stucture mirror>` dir. Then, when the file is self-synched again, assuming it has changed, the file `file.txt.gen1` is renamed to `file.txt.gen2` and the current state of the file is coppied to `file.txt.gen1`. From then on, whenever the file is self-synched and has changed, the file `file.txt.gen2` is replaced by `file.txt.gen1` and the current state is copied to `file.txt.gen1`.
 
 ## File Syncinc
 
@@ -99,8 +156,6 @@ Ori repos can talk to each other over local area networks.
 
 A repo can be listening, this is to say, a port on the system is being monitored. When you set a repo to listening, the port it monitors will be displayed. When you want a repo to talk to another you need to specify which port (thoughtI'd like not to, to be able to identiy all listening repos and diferentiate based on hostnames)
 
-
-
 ## Archives and Backups
 
 Important to note, there are 2 kinks of "back-ups": file archives and repo backups.
@@ -125,11 +180,11 @@ Originally, it was inteded that archive files would have the option of being RED
 
 ## BLOOB
 
-A Binary Large Orichalcum OBject, of BLOOB, is a full copy of an ori repo, including the binary data of all the files, all ori logs, all vaulted and RED files, etc, as a single binary file.
+A Binary Large Orichalcum OBject, or BLOOB, is a full copy of an ori repo, including the binary data of all the files, all ori logs, all vaulted and RED files, etc, as a single binary file.
 
 ### Encyrpted BLOOB
 
-Perhapse the main reason BLOOBs could be usefull would be for small files which we want to keep backups of automatically. havig these backups pre encryted makes it a nice little package which you can drop on any cloud storage platform without much worry. _Note: Orichalcum is not, primarily, a security application, and is not recomended for security dependent uses._
+Perhapse the main reason BLOOBs could be usefull would be for small files which we want to keep backups of automatically. Havig these backups pre encryted makes it a nice little package which you can drop on any cloud storage platform without much worry. _Note: Orichalcum is not, primarily, a security application, and is not recomended for security dependent uses._
 
 ### BLOOBBEs
 
