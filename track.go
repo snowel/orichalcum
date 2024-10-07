@@ -1,10 +1,11 @@
 package main
 
 import (
-		  "fmt"
-		  "os"
-		  "strings"
-		  "time"
+	"fmt"
+	"os"
+	"strings"
+	"time"
+	"github.com/oklog/ulid/v2"
 )
 
 
@@ -165,31 +166,32 @@ func IsTracked(absolutePath string, ori *OriLog) int {
 }
 
 func TrackFile(fSlice *[]OriFile, path PathPair) {//TODO error
-		  newEntry := OriFile{
-								Path: path.absPath,
-								Hash: HashFile(path.path),
-								DateCreated: time.Now().Unix(),
-								DateMod: time.Now().Unix(),
-								}
+	newEntry := OriFile{
+	ID: ulid.Make(),
+	Path: path.absPath,
+	Hash: HashFile(path.path),
+	DateCreated: time.Now().Unix(),
+	DateMod: time.Now().Unix(),
+}
 
-		  *fSlice = append(*fSlice, newEntry)
+	*fSlice = append(*fSlice, newEntry)
 }
 
 func UpdateTrackedFile(entry *OriFile, orilog *OriLog, path PathPair) {
-	 newHash :=HashFile(path.path)  
-	 oldSize := entry.Size
-	 oldEdit := entry.DateMod
-	 rel := WhereIsOriRoot(".")// TODO might want to add a "vitual working dir" for the case where I'll be syncing etc
+	newHash :=HashFile(path.path)  
+	oldSize := entry.Size
+	oldEdit := entry.DateMod
+	rel := WhereIsOriRoot(".")// TODO might want to add a "vitual working dir" for the case where I'll be syncing etc
 	if entry.Hash != newHash {
-				 entry.DateMod = time.Now().Unix()
-				 entry.DateChanged = FileChanged(path.path).Unix() 
-				 entry.Hash = HashFile(path.path)
-				 entry.Size = FileSize(path.path) 
-		  }
+		entry.DateMod = time.Now().Unix()
+		entry.DateChanged = FileChanged(path.path).Unix() 
+		entry.Hash = HashFile(path.path)
+		entry.Size = FileSize(path.path) 
+	}
 		  
-		  if entry.IsArc == true {
-			  AutoArchive(entry, orilog, oldSize, oldEdit, rel)
-		  }
+	if entry.IsArc == true {
+		AutoArchive(entry, orilog, oldSize, oldEdit, rel)
+	}
 }
 
 func UpdateFileEntry(orilog *OriLog, path PathPair) {

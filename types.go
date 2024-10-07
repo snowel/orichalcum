@@ -1,7 +1,8 @@
 package main
 
 import (
-		  "crypto/sha512"
+	"crypto/sha512"
+	"github.com/oklog/ulid/v2"
 )
 
 // file structs
@@ -34,13 +35,16 @@ type OriMeta struct {
 
 // Infomation about a given file, as tracked by Orichalcum.
 type OriFile struct {
+			ID ulid.ULID // unique identifier for the files
 		  Path string // Path relative to the root of the ori repo.
 		  Filename string // temp
 		  Hash [sha512.Size]byte // SHA512 hash sum
-		  DateMod int64 // Date of last sync where the file was differnt
-		  DateChanged int64 // Date of las change, according to OS FS .  currently redundant but temporarily both are used
-		  DateTracked int64 // Date when the file is added to the repo
+		  DateMod int64  // Date of las change, according to OS FS .  currently redundant but temporarily both are used
 		  DateCreated int64// Date of the file creation according to OS FS 
+		  DateUpdated int64	// Date of last sync where the file was differnt
+			// NOTE - DateUpdated should be updated with setting about the file are changed.
+			// This will help make metadata coalesche when syncing.
+		  DateTracked int64 // Date when the file is added to the repo
 		  Size int64 // Size of the file in bytes
 
 		  // Meta fields are essetial information fields that are exclusive to Orichicalcum.
@@ -61,6 +65,8 @@ type OriFile struct {
 		  //Size chance can double as time change as well
 		  //TODO rename
 		  CustomVaultDir string
+
+			Generations uint // How many copies are held as generations.
 
 		  IsRED bool // A single RED copy of each tracked file is saved in the vault upon modification.
 		  REDFactor uint // How heavily is the files bits redundacified? (Factors of 8. I.e. if the factor is 10, the file is 80x the size)
